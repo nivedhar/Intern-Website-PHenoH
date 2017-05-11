@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>ADMIN PANEL</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link href="public/assets/css/bootstrap.min.css" rel="stylesheet">
+        <link href="public/assets/css/font-awesome.min.css" rel="stylesheet">
+        <link href="public/assets/css/back_main.css" rel="stylesheet">
+        <script type="text/javascript" src="public/assets/js/jquery.js"></script>
+    </head>
+    <body>
+        <header>
+            <nav class="navbar navbar-inverse">
+                <div class="container-fluid">
+                    <div class="navbar-header">
+                        <a href="/phenoh"><img src="public/assets/images/new-logo.png" alt="Logo"></a>
+                    </div>
+                    <ul class="nav navbar-nav">
+                        <li class="active" data-href="#facts"><a href="#">Fun Facts</a></li>
+                        <li data-href="#testimonial"><a href="#">Testimonial</a></li>
+                        <li data-href="#"><a href="#">Page 2</a></li> 
+                    </ul>
+                    <ul class="nav navbar-nav navbar-right">
+                        <li><a href="#" id="logout"><i class="fa fa-lock"></i> Logout</a></li>
+                    </ul>
+                </div>
+            </nav>
+        </header>
+        <div>
+            <p class="error text-danger"></p>
+            <p class="text-success" id="success"></p>
+            <div class="container">
+                <div id="facts" class="hide container-content">
+                    <form role="form" action="#" method="POST" id="fact_form">
+                        <div class="facts">
+                            <?php echo $tpl ?>
+                        </div>
+                        <button id="add" class="btn btn-lg btn-primary">+</button>
+                        <input type="submit" class="btn btn-lg btn-primary" value="submit">
+                    </form>
+                </div>
+                <div id="testimonial" class="hide container-content">
+                    <form role="form" action="#" method="POST" id="testimonial_form">
+                        <div class="testimonials">
+                            <?php echo $tpl_testimonial ?>
+                        </div>
+                        <input type="submit" class="btn btn-lg btn-primary" value="submit">
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <script id="facts_tpl" type="text/x-template">
+            <div id="fact%num%" data-id="%num%" class="fact-group form-group col-xs-3">
+                <h3>Fun Fact #%num%</h3>
+                <label>Description : </label>
+                <input type="text" name="fact_form[%num%][description]" class="form-control desc%num%">
+                <label>Fact : </label>
+                <input type="text" name="fact_form[%num%][fact]" class="form-control fact%num%">
+                <label>Icon Class : </label>
+                <input type="text" name="fact_form[%num%][icon_class]" class="form-control class%num%">
+                <input type="hidden" name="fact_form[%num%][id_fact]" value="%num%">
+            </div>
+        </script>
+        <script>
+            
+            var Admin   =   {
+                fact_num    :   "<?php echo $num; ?>"
+            };
+            
+            var Form    =   {
+                validateFacts : function()
+                {
+                    try
+                    {
+                        $.each($('.facts .fact-group'), function(){
+                            var id  =   $(this).data('id');
+                            
+                            if( ! $('.desc'+id).val())
+                                throw {'msg' : 'Please enter Description', 'elt' : '.desc'+id};
+                            
+                            if( ! $('.fact'+id).val())
+                                throw {'msg' : 'Please enter Fact', 'elt' : '.fact'+id};
+                            
+                            if( ! $('.class'+id).val())
+                                throw {'msg' : 'Please enter icon class', 'elt' : '.class'+id};
+                        });
+                        
+                        return true;
+                    }
+                    catch(err) {
+                        $('.error').text(err.msg).show();
+                        window.scrollTo(0,0);
+                        setTimeout(function(){ 
+                            $('.error').hide();
+                        }, 5000);
+
+                        $(err.elt).focus();
+
+                        return false;
+                    }    
+                },
+
+                saveFacts    :   function()
+                {
+                    $.ajax({
+                        type: "POST",
+                        url: "controller/ajaxHandler.php",
+                        cache: false,
+                        dataType: 'json',
+                        data: $('#fact_form').serializeArray(),
+                        success: function(res){
+                            if(res.error == 1)
+                            {
+                                $('.error').text(res.msg).show();
+                                setTimeout(function(){ 
+                                    $('.error').hide();
+                                }, 5000);
+                            }
+                            else
+                            {
+                                $('#success').text('Successfully Saved!!').show();
+                                setTimeout(function(){ 
+                                    $('#success').hide();
+                                }, 5000);
+                            }
+                        },
+                        error: function(err){
+                            $('.error').text(err.responseText).show();
+                            setTimeout(function(){ 
+                                $('.error').hide();
+                            }, 5000);
+                        }
+                    });
+                }
+            };
+            
+            $(document).on('ready', function(){
+                
+                $('#facts').removeClass('hide');
+                $('#facts').delay(300).fadeIn();
+                
+                $('.navbar-nav li').on('click', function(e){
+                    e.preventDefault();
+                    
+                    var href    =   $(this).data('href');
+                    
+                    $('.container-content').hide();
+                    $(href).removeClass('hide');
+                    $(href).delay(300).fadeIn();
+                    
+                    $('.navbar-nav li').removeClass('active');
+                    $(this).addClass('active');
+                });
+                
+                $('#logout').on('click', function(){
+                    $.ajax({
+                        url: "controller/logout.php",
+                        success: function(){
+                            window.location.href    =   '/phenoh?controller=admin';
+                        },
+                        error: function(err){
+                            $('.error').text(err.responseText).show();
+                            setTimeout(function(){ 
+                                $('.error').hide();
+                            }, 5000);
+                        }
+                    });
+                });
+
+                $('#add').on('click', function(e){
+                    e.preventDefault();
+                    var template    =   $('#facts_tpl').html();
+
+                    template        =   template.replace(/%num%/g, ++Admin.fact_num);
+
+                    var $template   =   $(template);
+
+                    $('.facts').append($template);
+                });
+
+                $('#fact_form').on('submit', function(e){
+                    e.preventDefault();
+                    
+                    if( ! Form.validateFacts())
+                        return;
+                    
+                    Form.saveFacts();
+                });
+            });
+        </script>
+    </body>
+</html>
